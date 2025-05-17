@@ -1,2 +1,3 @@
-# dreamr-frontend
+# React + Vite
+
 dreamr frontend

@@ -1,0 +1,193 @@
+import { useState, useEffect } from 'react';
+
+export default function App() {
+  const [view, setView] = useState('landing');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [message, setMessage] = useState('');
+  const [dreams, setDreams] = useState([]);
+
+  const register = async () => {
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, first_name: firstName }),
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.message) setView('entry');
+      // if (data.message) setView('dashboard');
+      else setMessage(data.error);
+    } catch (err) {
+      setMessage('Error registering.');
+    }
+  };
+
+  const handleRegister = (e) => {
+    e.preventDefault();
+    register();
+  };
+
+  const login = async () => {
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.message) setView('entry');
+      // if (data.message) setView('dashboard');
+      else setMessage(data.error);
+    } catch (err) {
+      setMessage('Error logging in.');
+    }
+  };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    login();
+  };
+
+  const logout = async () => {
+    try {
+      await fetch('/api/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      setView('landing');
+      setEmail('');
+      setPassword('');
+      setFirstName('');
+      setDreams([]);
+    } catch {
+      setMessage('Error logging out.');
+    }
+  };
+
+  const fetchDreams = async () => {
+    try {
+      const res = await fetch('/api/dreams', { credentials: 'include' });
+      const data = await res.json();
+      setDreams(data);
+    } catch {
+      setDreams([]);
+    }
+  };
+
+  useEffect(() => {
+    if (view === 'dashboard') fetchDreams();
+  }, [view]);
+
+  const Navigation = () => (
+    <nav className="bg-purple-950 text-white px-6 py-4 shadow flex justify-between items-center">
+      {/* <div className="font-bold text-xl">
+        Welcome to Dreamr ✨ <span className="text-sm text-purple-300 italic ml-2">Your personal AI-powered dream companion</span>
+      </div> */}
+      <div>
+        <div className="font-bold text-xl">Welcome to Dreamr ✨</div>
+        <div className="text-sm text-purple-300 italic">Your personal AI-powered dream companion</div>
+      </div>
+      <div className="space-x-4">
+        <button onClick={() => setView('dashboard')} className="hover:text-purple-300">Journal</button>
+        <button onClick={() => setView('entry')} className="hover:text-purple-300">New Dream</button>
+        <button onClick={() => setView('profile')} className="hover:text-purple-300">Profile</button>
+        <button onClick={logout} className="hover:text-purple-300">Log Out</button>
+      </div>
+    </nav>
+  );
+
+  if (view === 'landing') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-800 to-indigo-700 flex flex-col items-center justify-center text-white">
+        <h1 className="text-4xl font-bold mb-6">Welcome to Dreamr ✨</h1>
+        <p className="mb-8 text-lg">Your personal AI-powered dream companion</p>
+        <div className="space-x-4">
+          <button className="bg-white text-purple-800 font-semibold px-6 py-2 rounded hover:bg-gray-200" onClick={() => setView('login')}>Log In</button>
+          <button className="bg-transparent border border-white px-6 py-2 rounded hover:bg-white hover:text-purple-800" onClick={() => setView('register')}>Register</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'login') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-800 to-indigo-700 flex flex-col items-center justify-center text-white">
+        <h1 className="text-2xl font-bold mb-4">Log In</h1>
+        <form onSubmit={handleLogin} className="bg-white p-6 rounded shadow-md w-full max-w-md text-gray-800">
+          <input className="block w-full mb-2 p-2 border rounded" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input className="block w-full mb-2 p-2 border rounded" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full">Log In</button>
+          {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
+          <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('register')}>Need an account? Register</p>
+        </form>
+      </div>
+    );
+  }
+
+  if (view === 'register') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-800 to-indigo-700 flex flex-col items-center justify-center text-white">
+        <h1 className="text-2xl font-bold mb-4">Create Account</h1>
+        <form onSubmit={handleRegister} className="bg-white p-6 rounded shadow-md w-full max-w-md text-gray-800">
+          <input className="block w-full mb-2 p-2 border rounded" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          <input className="block w-full mb-2 p-2 border rounded" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input className="block w-full mb-2 p-2 border rounded" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full">Register</button>
+          {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
+          <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('login')}>Already have an account? Log in</p>
+        </form>
+      </div>
+    );
+  }
+
+  if (view === 'dashboard') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
+        <Navigation />
+        <div className="p-8">
+          <h2 className="text-3xl font-bold mb-6">Your Dream Journal ✨</h2>
+          {/* <p className="mb-8 text-lg">Your personal AI-powered dream companion</p> */}
+          <div className="grid gap-4 max-w-3xl">
+            {dreams.length > 0 ? dreams.map(dream => (
+              <div key={dream.id} className="bg-white text-gray-800 rounded p-4 shadow">
+                <p className="mb-2 font-semibold">{dream.created_at ? new Date(dream.created_at).toLocaleString() : ''}</p>
+                <p className="italic mb-2">{dream.text}</p>
+                {dream.image_url && <img src={dream.image_url} alt="dream visual" className="rounded mt-2" />}
+              </div>
+            )) : <p>No dreams recorded yet. Start by submitting one in the mobile app.</p>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'entry') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
+        <Navigation />
+        <div className="p-8 max-w-xl mx-auto">
+          <h1 className="text-2xl font-bold mb-4">How did you sleep?</h1>
+          <p className="mb-4">This page will allow dream submission later.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'profile') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
+        <Navigation />
+        <div className="p-8 max-w-xl mx-auto">
+          <h1 className="text-2xl font-bold mb-4">Profile & Settings</h1>
+          <p>Profile options will appear here.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
