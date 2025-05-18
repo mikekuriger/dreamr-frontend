@@ -174,8 +174,8 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
         <Navigation />
-        <div className="p-8 grid grid-cols-2 gap-6">
-          <div>
+        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="order-2 md:order-1">
             <h2 className="text-3xl font-bold mb-4">{userName}'s Dream Journal ✨</h2>
             <div className="grid gap-4">
               {dreams.length > 0 ? dreams.map(dream => (
@@ -210,11 +210,13 @@ export default function App() {
                     )}
               
                     {/* TEXT BLOCK */}
-                    <div className="flex-grow cursor-pointer" onClick={() => toggleExpand(dream.id)}>
-                      <p className="italic mb-2">{dream.text}</p>
-                      {expandedDreams[dream.id] && dream.analysis && (
-                        <p className="text-sm text-purple-900 mt-2">{dream.analysis}</p>
-                      )}
+                    <div>
+                        <div className="flex-grow cursor-pointer" onClick={() => toggleExpand(dream.id)}>
+                          <p className="italic mb-2">{dream.text}</p>
+                          {expandedDreams[dream.id] && dream.analysis && (
+                            <p className="text-sm text-purple-900 mt-2">{dream.analysis}</p>
+                          )}
+                        </div>
                     </div>
                   </div>
                 </div>
@@ -223,7 +225,7 @@ export default function App() {
             </div>
           </div>
 
-          <div>
+          <div className="order-1 md:order-2">
             <h2 className="text-2xl font-bold mb-4">Submit a New Dream</h2>
             <textarea
               className="w-full h-40 p-2 text-gray-800 rounded mb-2"
