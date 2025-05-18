@@ -157,13 +157,16 @@ export default function App() {
 
   const Navigation = () => (
     <nav className="bg-purple-950 text-white px-6 py-4 shadow flex justify-between items-center">
-      <div className="font-bold text-xl">
-        Welcome to Dreamr ✨ <span className="text-sm text-purple-300 italic ml-2">Your personal AI-powered dream analysis</span>
+      <div className="font-bold text-xl flex flex-col md:flex-row md:items-center">
+        <span>Welcome to Dreamr ✨</span>
+        <span className="text-sm text-purple-300 italic md:ml-2 mt-1 md:mt-0">
+          Your personal AI-powered dream analysis
+        </span>
       </div>
       <div className="space-x-4">
-        <button onClick={() => setView('dashboard')} className="hover:text-purple-300">Journal</button>
-        <button onClick={() => setView('profile')} className="hover:text-purple-300">{userName}'s Profile</button>
-        <button onClick={logout} className="hover:text-purple-300">Log Out</button>
+        {/* <button onClick={() => setView('dashboard')} className="hover:text-purple-300">Journal</button> */}
+        <button onClick={() => setView('profile')} className="hover:text-purple-300">Profile</button>
+        {/* <button onClick={logout} className="hover:text-purple-300">Log Out</button> */}
       </div>
     </nav>
   );
@@ -176,7 +179,7 @@ export default function App() {
         <Navigation />
         <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="order-2 md:order-1">
-            <h2 className="text-3xl font-bold mb-4">{userName}'s Dream Journal ✨</h2>
+            <h2 className="text-3xl font-bold mb-4">Dream Journal ✨</h2>
             <div className="grid gap-4">
               {dreams.length > 0 ? dreams.map(dream => (
                 <div key={dream.id} className="bg-white text-gray-800 rounded p-4 shadow">
@@ -226,7 +229,13 @@ export default function App() {
           </div>
 
           <div className="order-1 md:order-2">
-            <h2 className="text-2xl font-bold mb-4">Submit a New Dream</h2>
+            <h2 className="text-2xl font-bold mb-2">Hello, {userName}</h2>
+            <p className="text-sm text-purple-200 mb-4">
+            Tell me about your dream in as much detail as you remember — characters, settings, emotions, anything that stood out. 
+            After submitting, I will take a moment to analyze your dream and generate a personalized interpretation. 
+            This may take a few seconds, so sit tight while the magic happens ✨
+            </p>
+
             <textarea
               className="w-full h-40 p-2 text-gray-800 rounded mb-2"
               value={dreamText}
