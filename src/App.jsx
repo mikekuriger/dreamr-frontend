@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import DreamImageCarousel from './components/DreamImageCarousel';
+
 
 export default function App() {
   const [view, setView] = useState('landing');
@@ -10,11 +12,16 @@ export default function App() {
   const [dreamText, setDreamText] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [dreamImage, setDreamImage] = useState('');
-  const [loading, setLoading] = useState(false);
   const [expandedDreams, setExpandedDreams] = useState({});
   const [loadingSession, setLoadingSession] = useState(true);
   const [userName, setUserName] = useState('');
   const [timezone, setTimezone] = useState('');
+  const [allImages, setAllImages] = useState([]);
+// for button text to update
+  const [loading, setLoading] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState(''); // 'analyzing', 'generating'
+    
+
 
 
   const fetchDreams = async () => {
@@ -51,6 +58,13 @@ export default function App() {
     };
 
     verifyAuth();
+
+    // Fetch available image filenames for landing page
+    fetch('/api/images')
+      .then(res => res.json())
+      .then(setAllImages)
+      .catch(err => console.error('Error fetching images:', err));
+    
   }, []);
 
   if (loadingSession) return <div className="text-white p-8">Checking session...</div>;
@@ -102,7 +116,7 @@ export default function App() {
         fetchDreams();
       } else setMessage(data.error);
     } catch (err) {
-      setMessage('Error logging in.');
+      setMessage('Error logging in, try reloading the page');
     }
   };
 
@@ -129,7 +143,10 @@ export default function App() {
 
   const submitDream = async () => {
     setLoading(true);
+    setLoadingPhase('analyzing');
     setMessage('');
+    setAiResponse('');
+    setDreamImage('');
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -143,15 +160,19 @@ export default function App() {
       if (data.error) {
         setMessage(data.error);
       } else {
+        //setMessage('Attempting to create an image of your dream');
+        //setLoadingPhase('generating');
         setAiResponse(data.analysis);
         setDreamImage(data.image);
-        setDreamText('');
-        fetchDreams();
+        
       }
     } catch (err) {
-      setMessage('Failed to submit dream.');
+      setMessage('Failed to complete your dream analysis.  I\'m still working on the code.  Please try again.');
     } finally {
       setLoading(false);
+      setLoadingPhase('');
+      setDreamText('');
+      fetchDreams();
     }
   };
 
@@ -165,8 +186,8 @@ export default function App() {
       </div>
       <div className="space-x-4">
         {/* <button onClick={() => setView('dashboard')} className="hover:text-purple-300">Journal</button> */}
-        <button onClick={() => setView('profile')} className="hover:text-purple-300">Profile</button>
-        {/* <button onClick={logout} className="hover:text-purple-300">Log Out</button> */}
+        <button onClick={() => setView('profile')} className="hover:text-purple-300">P</button>
+        <button onClick={logout} className="hover:text-purple-300">L</button>
       </div>
     </nav>
   );
@@ -244,12 +265,44 @@ export default function App() {
             ></textarea>
             <button
               onClick={submitDream}
-              className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded text-white w-full"
+              disabled={loading}
+              className={`flex items-center justify-center px-4 py-2 rounded w-full text-white transition ${
+                loading
+                  ? 'bg-purple-400 cursor-not-allowed'
+                  : 'bg-purple-600 hover:bg-purple-700'
+              }`}
             >
-              Submit Dream
+              {loading ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 mr-2 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    ></path>
+                  </svg>
+                  {loadingPhase === 'generating' ? 'Generating Image...' : 'Analyzing Dream...'}
+                </>
+              ) : (
+                'Submit Dream'
+              )}
             </button>
+
             {message && <p className="mt-2 text-sm text-red-300">{message}</p>}
-            {loading && <p className="mt-4 text-white">Analyzing your dream...</p>}
+            {loading && <p className="mt-4 text-white">Your dream analysis will appear here shortly.</p>}
             {aiResponse && (
               <div className="mt-6 p-4 bg-white text-gray-900 rounded shadow">
                 <h3 className="font-bold text-lg mb-2">Dream Interpretation:</h3>
@@ -265,18 +318,38 @@ export default function App() {
     );
   }
 
-  if (view === 'landing') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-800 to-indigo-700 flex flex-col items-center justify-center text-white">
-        <h1 className="text-4xl font-bold mb-6">Welcome to Dreamr ✨</h1>
-        <p className="mb-8 text-lg">Your personal AI-powered dream analysis</p>
-        <div className="space-x-4">
-          <button className="bg-white text-purple-800 font-semibold px-6 py-2 rounded hover:bg-gray-200" onClick={() => setView('login')}>Log In</button>
-          <button className="bg-transparent border border-white px-6 py-2 rounded hover:bg-white hover:text-purple-800" onClick={() => setView('register')}>Register</button>
+  // if (view === 'landing') {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-br from-purple-800 to-indigo-700 flex flex-col items-center justify-center text-white">
+  //       <h1 className="text-4xl font-bold mb-6">Welcome to Dreamr ✨</h1>
+  //       <p className="mb-8 text-lg">Your personal AI-powered dream analysis</p>
+  //       <div className="space-x-4">
+  //         <button className="bg-white text-purple-800 font-semibold px-6 py-2 rounded hover:bg-gray-200" onClick={() => setView('login')}>Log In</button>
+  //         <button className="bg-transparent border border-white px-6 py-2 rounded hover:bg-white hover:text-purple-800" onClick={() => setView('register')}>Register</button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
+
+
+    if (view === 'landing') {
+      const randomImages = [...allImages].sort(() => 0.5 - Math.random());
+    
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-purple-800 to-indigo-700 flex flex-col items-center justify-center text-white relative">
+          <h1 className="text-4xl font-bold mb-6">Welcome to Dreamr ✨</h1>
+          <p className="mb-8 text-lg">Your personal AI-powered dream analysis</p>
+          <div className="space-x-4">
+            <button className="bg-white text-purple-800 font-semibold px-6 py-2 rounded hover:bg-gray-200" onClick={() => setView('login')}>Log In</button>
+            <button className="bg-transparent border border-white px-6 py-2 rounded hover:bg-white hover:text-purple-800" onClick={() => setView('register')}>Register</button>
+          </div>
+    
+          <div className="absolute bottom-0 w-full px-4 pb-6">
+            <DreamImageCarousel images={randomImages} />
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
   if (view === 'login') {
     return (
@@ -289,6 +362,7 @@ export default function App() {
           {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
           <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('register')}>Need an account? Register</p>
         </form>
+
       </div>
     );
   }
@@ -305,6 +379,7 @@ export default function App() {
           {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
           <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('login')}>Already have an account? Log in</p>
         </form>
+
       </div>
     );
   }
