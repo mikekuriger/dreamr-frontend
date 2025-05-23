@@ -516,7 +516,7 @@ export default function App() {
               <div key={i} className="w-full aspect-square">
                 <img
                   src={`/static/images/dreams/${img}`}
-                  className="w-full h-full object-cover opacity-40"
+                  className="w-full h-full object-cover opacity-60"
                   alt=""
                 />
               </div>
@@ -539,23 +539,58 @@ export default function App() {
     
   if (view === 'login') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-800 to-indigo-700 flex flex-col items-center justify-center text-white">
-        <h1 className="text-2xl font-bold mb-4">Log In</h1>
-        <form onSubmit={handleLogin} className="bg-white p-6 rounded shadow-md w-full max-w-md text-gray-800">
-          <input className="block w-full mb-2 p-2 border rounded" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input className="block w-full mb-2 p-2 border rounded" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full">Log In</button>
-          {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
-          <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('register')}>Need an account? Register</p>
-        </form>
-
+      <div className="min-h-screen bg-black relative overflow-hidden">
+        {/* Background tiles */}
+        <div className="absolute inset-0 overflow-y-auto">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-0">
+            {backgroundImages.map((img, i) => (
+              <div key={i} className="w-full aspect-square">
+                <img
+                  src={`/static/images/dreams/${img}`}
+                  className="w-full h-full object-cover opacity-60"
+                  alt=""
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+  
+        {/* Foreground content */}
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-white text-center">
+          <h1 className="text-2xl font-bold mb-4">Log In</h1>
+          <form onSubmit={handleLogin} className="bg-white p-6 rounded shadow-md w-full max-w-md text-gray-800">
+            <input className="block w-full mb-2 p-2 border rounded" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input className="block w-full mb-2 p-2 border rounded" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full">Log In</button>
+            {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
+            <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('register')}>Need an account? Register</p>
+          </form>
+        </div>
       </div>
     );
   }
 
-  if (view === 'register') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-800 to-indigo-700 flex flex-col items-center justify-center text-white">
+
+if (view === 'register') {
+  return (
+    <div className="min-h-screen bg-black relative overflow-hidden">
+      {/* Background tiles */}
+      <div className="absolute inset-0 overflow-y-auto">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-0">
+          {backgroundImages.map((img, i) => (
+            <div key={i} className="w-full aspect-square">
+              <img
+                src={`/static/images/dreams/${img}`}
+                className="w-full h-full object-cover opacity-60"
+                alt=""
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Foreground content */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-white text-center">
         <h1 className="text-2xl font-bold mb-4">Create Account</h1>
         <form onSubmit={handleRegister} className="bg-white p-6 rounded shadow-md w-full max-w-md text-gray-800">
           <input className="block w-full mb-2 p-2 border rounded" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -565,10 +600,11 @@ export default function App() {
           {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
           <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('login')}>Already have an account? Log in</p>
         </form>
-
       </div>
-    );
-  }
+    </div>
+  );
+}
+
 
   if (view === 'profile') {
     return (
