@@ -25,3 +25,5 @@ dist-ssr
 src/.ipynb_checkpoints/*
 .ipynb_checkpoints/*
 static
+dev
+privacy.txt
