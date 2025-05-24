@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { Menu, LogOut, LayoutDashboard, Home } from 'lucide-react';
+import { timezones } from './timezones';
+
 // import DreamImageCarousel from './components/DreamImageCarousel';
 
-
+  
 export default function App() {
   const [view, setView] = useState('landing');
+  console.log("Current view:", view);
+  
   const [confirmationMessage, setConfirmationMessage] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,7 +37,34 @@ export default function App() {
     }
   };
 
-  function ProfileMenu({ onLogout, onProfile }) {
+  // for social media links
+  const [selectedDream, setSelectedDream] = useState(null);
+  const shareToSocial = (dream, platform = 'facebook') => {
+    const shareUrl = `https://dreamr.zentha.me/gallery/${dream.id}`;
+    const text = encodeURIComponent(`Check out this dream I had!`);
+    const url = encodeURIComponent(shareUrl);
+  
+    let shareLink = '';
+  
+    switch (platform) {
+      case 'facebook':
+        shareLink = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        break;
+      case 'twitter':
+        shareLink = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+        break;
+      case 'pinterest':
+        shareLink = `https://pinterest.com/pin/create/button/?url=${url}&media=${url}&description=${text}`;
+        break;
+      default:
+        shareLink = url;
+    }
+  
+    window.open(shareLink, '_blank', 'width=600,height=400');
+  };
+
+
+  function ProfileMenu({ onGallery, onLogout, onProfile }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef(null);
 
@@ -60,9 +91,17 @@ export default function App() {
         >
           <Menu className="w-5 h-5" />
         </button>
-  
         {isOpen && (
           <div className="absolute right-0 mt-2 w-40 bg-white text-black rounded shadow-lg z-50">
+            <button
+              onClick={() => {
+                onGallery();
+                setIsOpen(false);
+              }}
+              className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+            >
+              Gallery
+            </button>
             <button
               onClick={() => {
                 onProfile();
@@ -154,7 +193,98 @@ export default function App() {
     }
   }, []);
 
+  // For the profle view
+  const [formData, setFormData] = useState({
+    email: '',
+    firstName: '',
+    birthdate: '',
+    gender: '',
+    timezone: '',
+    avatar: null,
+  });
+  
+  useEffect(() => {
+    if (view === 'profile') {
+      fetch('/api/profile', { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          setFormData({
+            email: data.email || '',
+            firstName: data.first_name || '',
+            birthdate: data.birthdate || '',
+            gender: data.gender || '',
+            timezone: data.timezone || '',
+            avatar: null  // file uploads can't be prefilled
+          });
+        })
+        .catch(err => console.error("Failed to load profile:", err));
+    }
+  }, [view]);
 
+  // useEffect(() => {
+  //   const url = new URL(window.location.href);
+  //   const id = url.pathname.split('/').pop();  // assuming /gallery/abc123
+  
+  //   if (url.pathname.startsWith('/gallery/')) {
+
+  //     if (!user) {
+  //       console.warn("Blocked unauthorized access to shared dream.");
+  //       return;
+  //     }
+      
+  //     fetch(`/api/gallery/${id}`)
+  //       .then(res => res.json())
+  //       .then(data => {
+  //         setSelectedDream(data);
+  //         setView('dream');
+  //       })
+  //       .catch(err => {
+  //         console.error('Dream not found');
+  //         setView('landing');
+  //       });
+  //   }
+  // }, []);
+
+
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+    if (name === 'avatar') {
+      setFormData({ ...formData, avatar: files[0] });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const form = new FormData();
+    for (const key in formData) {
+      if (formData[key]) form.append(key, formData[key]);
+    }
+
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        body: form,
+        credentials: 'include'
+      });
+  
+      if (res.ok) {
+        const data = await res.json();
+        setUserName(data.first_name || 'Sleepyhead');
+        //alert('Profile updated!');
+        setView('dashboard');  // 👈 redirect to dashboard
+      } else {
+        alert('Failed to update profile.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred.');
+    }
+  };
+
+
+  
   if (loadingSession) return <div className="text-white p-8">Checking session...</div>;
 
   const toggleExpand = (id) => {
@@ -321,19 +451,17 @@ export default function App() {
                 }} className="p-2 hover:text-purple-300">
           <Home className="w-5 h-5" />
         </button>
-        <ProfileMenu onLogout={logout} onProfile={() => setView('profile')} />
+        <ProfileMenu
+          onProfile={() => setView('profile')}
+          onGallery={() => setView('gallery')}
+          onLogout={logout}
+        />
       </div>
     </nav>
   );
 
   if (view === 'dashboard') {
     const latestDream = dreams[dreams.length - 1];
-
-    // <audio autoPlay loop volume="0.1">
-    //   <source src="/audio/meditation-hum.mp3" type="audio/mpeg" />
-    //   Your browser does not support the audio element.
-    // </audio>
-
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
         <Navigation />
@@ -532,6 +660,16 @@ export default function App() {
             <button className="bg-white text-purple-800 font-semibold px-6 py-2 rounded hover:bg-gray-200" onClick={() => setView('login')}>Log In</button>
             <button className="bg-transparent border border-white px-6 py-2 rounded hover:bg-white hover:text-purple-800" onClick={() => setView('register')}>Register</button>
           </div>
+          <a href="/login/google" className="mt-6">
+            <button className="bg-white text-gray-800 px-4 py-2 rounded shadow hover:bg-gray-100 flex items-center justify-center">
+              <img
+                src="https://developers.google.com/identity/images/g-logo.png"
+                alt="Google"
+                className="w-5 h-5 mr-3"
+              />
+              Continue with Google
+            </button>
+          </a>
         </div>
       </div>
     );
@@ -565,58 +703,228 @@ export default function App() {
             {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
             <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('register')}>Need an account? Register</p>
           </form>
+          <a href="/login/google" className="mt-6">
+            <button className="bg-white text-gray-800 px-4 py-2 rounded shadow hover:bg-gray-100 flex items-center justify-center">
+              <img
+                src="https://developers.google.com/identity/images/g-logo.png"
+                alt="Google"
+                className="w-5 h-5 mr-3"
+              />
+              Login with Google
+            </button>
+          </a>
         </div>
       </div>
     );
   }
 
 
-if (view === 'register') {
-  return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* Background tiles */}
-      <div className="absolute inset-0 overflow-y-auto">
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-0">
-          {backgroundImages.map((img, i) => (
-            <div key={i} className="w-full aspect-square">
+  if (view === 'register') {
+    return (
+      <div className="min-h-screen bg-black relative overflow-hidden">
+        {/* Background tiles */}
+        <div className="absolute inset-0 overflow-y-auto">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-0">
+            {backgroundImages.map((img, i) => (
+              <div key={i} className="w-full aspect-square">
+                <img
+                  src={`/static/images/dreams/${img}`}
+                  className="w-full h-full object-cover opacity-60"
+                  alt=""
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+  
+        {/* Foreground content */}
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-white text-center">
+          <h1 className="text-2xl font-bold mb-4">Create Account</h1>
+          <form onSubmit={handleRegister} className="bg-white p-6 rounded shadow-md w-full max-w-md text-gray-800">
+            <input className="block w-full mb-2 p-2 border rounded" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <input className="block w-full mb-2 p-2 border rounded" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input className="block w-full mb-2 p-2 border rounded" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full">Register</button>
+            {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
+            <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('login')}>Already have an account? Log in</p>
+          </form>
+          <a href="/login/google" className="mt-6">
+            <button className="bg-white text-gray-800 px-4 py-2 rounded shadow hover:bg-gray-100 flex items-center justify-center">
               <img
-                src={`/static/images/dreams/${img}`}
-                className="w-full h-full object-cover opacity-60"
-                alt=""
+                src="https://developers.google.com/identity/images/g-logo.png"
+                alt="Google"
+                className="w-5 h-5 mr-3"
               />
-            </div>
-          ))}
+              Register with Google
+            </button>
+          </a>
         </div>
       </div>
-
-      {/* Foreground content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-white text-center">
-        <h1 className="text-2xl font-bold mb-4">Create Account</h1>
-        <form onSubmit={handleRegister} className="bg-white p-6 rounded shadow-md w-full max-w-md text-gray-800">
-          <input className="block w-full mb-2 p-2 border rounded" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-          <input className="block w-full mb-2 p-2 border rounded" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input className="block w-full mb-2 p-2 border rounded" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full">Register</button>
-          {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
-          <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('login')}>Already have an account? Log in</p>
-        </form>
-      </div>
-    </div>
-  );
-}
+    );
+  }
 
 
   if (view === 'profile') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
-        <Navigation />
-        <div className="p-8 max-w-xl mx-auto">
-          <h1 className="text-2xl font-bold mb-4">Profile & Settings</h1>
-          <p>Profile options will appear here.</p>
+      <div className="min-h-screen bg-black relative overflow-hidden">
+        
+        {/* 🔹 Tile background (lowest layer) */}
+        <div className="absolute inset-0 z-0">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-0">
+            {backgroundImages.map((img, i) => (
+              <div key={i} className="w-full aspect-square">
+                <img
+                  src={`/static/images/dreams/${img}`}
+                  className="w-full h-full object-cover opacity-60"
+                  alt=""
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+  
+        {/* 🔹 Foreground gradient + profile form */}
+        <div className="relative z-10">
+          <Navigation />
+          {/* Translucent gradient wrapper */}
+          <div className="p-8 max-w-xl mx-auto mt-8 rounded-xl shadow-xl" style={{
+            background: 'linear-gradient(to bottom right, rgba(8, 28, 135, 0.8), rgba(67, 56, 202, 0.1))'
+          }}>
+            
+            {/* Fully opaque form inside */}
+            <div className="text-white">
+              <h1 className="text-2xl font-bold mb-4">Profile</h1>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* All your input fields remain unchanged */}
+                <label className="block">
+                  Email
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="block w-full mt-1 p-2 text-black rounded"
+                  />
+                </label>
+                <label className="block">
+                  First Name
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className="block w-full mt-1 p-2 text-black rounded"
+                  />
+                </label>
+                <label className="block">
+                  Birthdate
+                  <input
+                    type="date"
+                    name="birthdate"
+                    value={formData.birthdate}
+                    onChange={handleChange}
+                    className="block w-full mt-1 p-2 text-black rounded"
+                  />
+                </label>
+                <label className="block">
+                  Gender
+                  <select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    className="block w-full mt-1 p-2 text-black rounded"
+                  >
+                    <option value="">Select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="nonbinary">Nonbinary</option>
+                    <option value="prefer not to say">Prefer not to say</option>
+                  </select>
+                </label>
+                {/* <label className="block">
+                  Timezone
+                  <select
+                    name="timezone"
+                    value={formData.timezone}
+                    onChange={handleChange}
+                    className="block w-full mt-1 p-2 text-black rounded"
+                  >
+                    <option value="">Select your timezone</option>
+                    {timezones.map((tz, idx) => (
+                      <option key={idx} value={tz}>
+                        {tz}
+                      </option>
+                    ))}
+                  </select>
+                </label> */}
+                {/* <label className="block">
+                  Profile Photo (optional)
+                  <input
+                    type="file"
+                    name="avatar"
+                    onChange={handleChange}
+                    className="block mt-1 text-white"
+                    accept="image/*"
+                  />
+                </label> */}
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Save Profile
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
+
+  if (view === 'gallery') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
+        <Navigation />
+        <div className="w-full p-4">
+          <h2 className="text-3xl font-bold mb-4 text-center">Dream Gallery ✨</h2>
+        
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+            {dreams.map((dream, i) => (
+              <div key={i} className="w-full">
+                <img
+                  src={dream.image_file}
+                  alt="Dream"
+                  className="w-full h-auto rounded-lg"
+                />
+                <p className="text-sm text-gray-300">{dream.summary}</p>
+                <div className="flex gap-2 mt-1">
+                  {/* <button onClick={() => shareToSocial(dream, 'facebook')} className="text-blue-400 text-xs underline hover:text-blue-200">Share to Facebook</button> */}
+                  {/* <button onClick={() => shareToSocial(dream, 'twitter')} className="text-blue-400 text-xs underline hover:text-blue-200">Twitter</button> */}
+                  {/* <button onClick={() => shareToSocial(dream, 'pinterest')} className="text-blue-400 text-xs underline hover:text-blue-200">Pinterest</button> */}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'dream' && selectedDream) {
+    return (
+      <div className="min-h-screen bg-black text-white p-4">
+        <Navigation />
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <img
+            src={selectedDream.image_file}
+            alt="Dream"
+            className="w-full max-w-screen-xl h-auto"
+          />
+        </div>
+      </div>
+    );
+  }
+
 
   return null;
 }
