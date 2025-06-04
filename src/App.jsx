@@ -332,6 +332,7 @@ export default function App() {
     }
   };
 
+  // Dream submission
   const submitDream = async () => {
     setLoading(true);
     setLoadingPhase('analyzing');
@@ -360,7 +361,11 @@ export default function App() {
       const dreamTone = data.tone;
   
       setLoadingPhase('generating');
-      setMessage(`Your dream feels "${dreamTone || 'mysterious'}"`);
+      //mrk, 538
+      setMessage([
+        `Your dream feels "${dreamTone || 'mysterious'}".`,
+        'Please keep this window open while I create your dream image...'
+      ]);
   
       // Step 2: Send dream_id to /api/image_generate
       const imgRes = await fetch('/api/image_generate', {
@@ -528,7 +533,15 @@ export default function App() {
               )}
             </button>
 
-            {message && <p className="mt-2 text-sm text-red-300">{message}</p>}
+            {message && Array.isArray(message) ? (
+              <div className="mt-2 text-sm text-red-300">
+                {message.map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-red-300">{message}</p>
+            )}
             {loading && loadingPhase === 'analyzing' && (
               <p className="mt-4 text-white">Your dream analysis will appear here shortly.</p>
             )}
@@ -851,36 +864,7 @@ export default function App() {
       </div>
     );
   }
-  
-  // if (view === 'gallery2') {
-  //   return (
-  //     <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
-  //       <Navigation />
-  //       <div className="w-full p-4">
-  //         <h2 className="text-3xl font-bold mb-4 text-center">Dream Gallery ✨</h2>
-        
-  //         <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-  //           {dreams.map((dream, i) => (
-  //             <div key={i} className="w-full">
-  //               <img
-  //                 src={dream.image_file}
-  //                 alt="Dream"
-  //                 loading="lazy"
-  //                 className="w-full h-auto rounded-lg"
-  //               />
-  //               <p className="text-sm text-gray-300">{dream.summary}</p>
-  //               <div className="flex gap-2 mt-1">
-  //                 {/* <button onClick={() => shareToSocial(dream, 'facebook')} className="text-blue-400 text-xs underline hover:text-blue-200">Share to Facebook</button> */}
-  //                 {/* <button onClick={() => shareToSocial(dream, 'twitter')} className="text-blue-400 text-xs underline hover:text-blue-200">Twitter</button> */}
-  //                 {/* <button onClick={() => shareToSocial(dream, 'pinterest')} className="text-blue-400 text-xs underline hover:text-blue-200">Pinterest</button> */}
-  //               </div>
-  //             </div>
-  //           ))}
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+
 
   if (view === 'dream' && selectedDream) {
     return (
