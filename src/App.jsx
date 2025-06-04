@@ -2,9 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { Menu, LogOut, LayoutDashboard, Home } from 'lucide-react';
 import { timezones } from './timezones';
 
-// import DreamImageCarousel from './components/DreamImageCarousel';
-
-  
 export default function App() {
   const [view, setView] = useState('landing');
   console.log("Current view:", view);
@@ -36,31 +33,11 @@ export default function App() {
       setDreams([]);
     }
   };
-
-  // for social media links
-  const [selectedDream, setSelectedDream] = useState(null);
-  const shareToSocial = (dream, platform = 'facebook') => {
-    const shareUrl = `https://dreamr.zentha.me/gallery/${dream.id}`;
-    const text = encodeURIComponent(`Check out this dream I had!`);
-    const url = encodeURIComponent(shareUrl);
   
-    let shareLink = '';
-  
-    switch (platform) {
-      case 'facebook':
-        shareLink = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
-        break;
-      case 'twitter':
-        shareLink = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
-        break;
-      case 'pinterest':
-        shareLink = `https://pinterest.com/pin/create/button/?url=${url}&media=${url}&description=${text}`;
-        break;
-      default:
-        shareLink = url;
-    }
-  
-    window.open(shareLink, '_blank', 'width=600,height=400');
+  // to handle view changes
+  const handleViewChange = (newView) => {
+    setView(newView);
+    window.history.pushState({}, '', `/${newView}`);
   };
 
 
@@ -138,7 +115,7 @@ export default function App() {
           if (data.authenticated) {
             setUserName(data.first_name || 'Sleepyhead');
             await fetchDreams();
-            setView('dashboard');  // moved here so that user is populated before going to dashboard
+            handleViewChange('dashboard');  // moved here so that user is populated before going to dashboard
             return;
           }
         }
@@ -147,7 +124,7 @@ export default function App() {
       } finally {
         setLoadingSession(false);
       }
-      setView('landing');
+      handleViewChange('landing');
     };
 
     // Fetch available image filenames for landing page
@@ -155,7 +132,6 @@ export default function App() {
       try {
         const res = await fetch('/api/images');
         const files = await res.json();
-        // const shuffled = files.sort(() => 0.5 - Math.random()).slice(0, 30);
         const shuffled = files.sort(() => 0.5 - Math.random());
         setBackgroundImages(shuffled);
       } catch (err) {
@@ -178,20 +154,39 @@ export default function App() {
         .then(data => {
           if (data.error) {
             setConfirmationMessage(data.error);
-            setView('confirmation');
+            handleViewChange('confirmation');
           } else {
             // success — user is logged in, go to dashboard
-            setView('dashboard');
-            window.history.replaceState({}, document.title, '/dashboard');
+            handleViewChange('dashboard');
+            // window.history.replaceState({}, document.title, '/dashboard');
+            window.history.replaceState({}, document.title, window.location.pathname);
           }
         })
         .catch(() => {
           setConfirmationMessage("Error confirming your account.");
-          setView('confirmation');
+          handleViewChange('confirmation');
           window.history.replaceState({}, document.title, '/');
         });
     }
   }, []);
+
+  // inside app, this will make the URL pretty
+  useEffect(() => {
+    // On initial load, set view based on the path
+    const path = window.location.pathname.replace('/', '') || 'dashboard';
+    setView(path);
+  }, []);
+
+  // inside app, to handle browser back/forward buttons
+  useEffect(() => {
+    const onPopState = () => {
+      const path = window.location.pathname.replace('/', '') || 'dashboard';
+      setView(path);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
 
   // For the profle view
   const [formData, setFormData] = useState({
@@ -221,29 +216,6 @@ export default function App() {
     }
   }, [view]);
 
-  // useEffect(() => {
-  //   const url = new URL(window.location.href);
-  //   const id = url.pathname.split('/').pop();  // assuming /gallery/abc123
-  
-  //   if (url.pathname.startsWith('/gallery/')) {
-
-  //     if (!user) {
-  //       console.warn("Blocked unauthorized access to shared dream.");
-  //       return;
-  //     }
-      
-  //     fetch(`/api/gallery/${id}`)
-  //       .then(res => res.json())
-  //       .then(data => {
-  //         setSelectedDream(data);
-  //         setView('dream');
-  //       })
-  //       .catch(err => {
-  //         console.error('Dream not found');
-  //         setView('landing');
-  //       });
-  //   }
-  // }, []);
 
 
   const handleChange = (e) => {
@@ -273,7 +245,7 @@ export default function App() {
         const data = await res.json();
         setUserName(data.first_name || 'Sleepyhead');
         //alert('Profile updated!');
-        setView('dashboard');  // 👈 redirect to dashboard
+        handleViewChange('dashboard');  // 👈 redirect to dashboard
       } else {
         alert('Failed to update profile.');
       }
@@ -290,30 +262,6 @@ export default function App() {
   const toggleExpand = (id) => {
     setExpandedDreams((prev) => ({ ...prev, [id]: !prev[id] }));
   };
-
-  // const register = async () => {
-  //   try {
-  //     const res = await fetch('/api/register', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({
-  //         email,
-  //         password,
-  //         first_name: firstName,
-  //         timezone
-  //       }),
-  //       credentials: 'include'
-  //     });
-  //     const data = await res.json();
-  //     if (data.message) {
-  //       setView('dashboard');
-  //       if (data.first_name) setUserName(data.first_name);
-  //       fetchDreams();
-  //     } else setMessage(data.error);
-  //   } catch (err) {
-  //     setMessage('Error registering.');
-  //   }
-  // };
 
 
   const register = async () => {
@@ -355,7 +303,7 @@ export default function App() {
       });
       const data = await res.json();
       if (data.message) {
-        setView('dashboard');
+        handleViewChange('dashboard');
         fetchDreams();
       } else setMessage(data.error);
     } catch (err) {
@@ -374,7 +322,7 @@ export default function App() {
         method: 'POST',
         credentials: 'include'
       });
-      setView('landing');
+      handleViewChange('landing');
       setEmail('');
       setPassword('');
       setFirstName('');
@@ -390,34 +338,59 @@ export default function App() {
     setMessage('');
     setAiResponse('');
     setDreamImage('');
+  
     try {
+      // Step 1: Send dream to /api/chat
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: dreamText }),
         credentials: 'include'
       });
-
+  
       const data = await res.json();
-
-      if (data.error) {
-        setMessage(data.error);
-      } else {
-        //setMessage('Attempting to create an image of your dream');
-        //setLoadingPhase('generating');
-        setAiResponse(data.analysis);
-        setDreamImage(data.image);
-        
+  
+      if (!res.ok || data.error) {
+        setMessage(data.error || 'Unexpected error during dream analysis.');
+        return;
       }
+  
+      setAiResponse(data.analysis);
+      const dreamId = data.dream_id;
+      const dreamTone = data.tone;
+  
+      setLoadingPhase('generating');
+      setMessage(`Your dream feels "${dreamTone || 'mysterious'}"`);
+  
+      // Step 2: Send dream_id to /api/image_generate
+      const imgRes = await fetch('/api/image_generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dream_id: dreamId }),
+        credentials: 'include'
+      });
+  
+      const imgData = await imgRes.json();
+  
+      if (!imgRes.ok || imgData.error) {
+        setMessage(imgData.error || 'Image generation failed.');
+        return;
+      }
+  
+      setDreamImage(imgData.image);
+  
     } catch (err) {
-      setMessage('Failed to complete your dream analysis.  I\'m still working on the code.  Please try again.');
+      console.error("Error in submitDream:", err);
+      setMessage("Failed to complete your dream analysis. Please try again.");
     } finally {
+      setMessage('');
       setLoading(false);
       setLoadingPhase('');
       setDreamText('');
-      fetchDreams();
+      fetchDreams();  // Refresh dream history
     }
   };
+
 
   const Navigation = () => (
     <nav className="sticky top-0 z-50 bg-purple-950 text-white px-2 md:px-6 py-4 shadow flex justify-between items-center">
@@ -428,38 +401,23 @@ export default function App() {
         </span>
       </div>
       <div className="space-x-4">
-        {/* <button onClick={() => setView('dashboard')} className="hover:text-purple-300">Journal</button> */}
-        {/* <button onClick={() => setView('profile')} className="hover:text-purple-300">P</button> */}
-        {/* <button onClick={logout} className="hover:text-purple-300">L</button> */}
-          {/* <button onClick={() => setView('profile')} className="hover:text-purple-300 p-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button> */}
-        {/* <button
-          onClick={() => setView('profile')}
-          className="hover:text-purple-300 p-2 relative group"
-        >
-          <Menu className="w-5 h-5" />
-          <span className="absolute bottom-full mb-1 text-xs text-white bg-black rounded px-2 py-1 opacity-0 group-hover:opacity-100">
-            Profile
-          </span>
-        </button> */}
         <button onClick={() => {
-                  setView('dashboard');
+                  handleViewChange('dashboard');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }} className="p-2 hover:text-purple-300">
           <Home className="w-5 h-5" />
         </button>
         <ProfileMenu
-          onProfile={() => setView('profile')}
-          onGallery={() => setView('gallery')}
+          onProfile={() => handleViewChange('profile')}
+          onGallery={() => handleViewChange('gallery')}
           onLogout={logout}
         />
       </div>
     </nav>
   );
 
+
+  
   if (view === 'dashboard') {
     const latestDream = dreams[dreams.length - 1];
     return (
@@ -486,8 +444,9 @@ export default function App() {
                         style={{ display: 'inline-block', width: '48px', height: '48px', flexShrink: 0 }}
                       >
                         <img
-                          src={dream.image_file}
+                          src={dream.image_tile}
                           alt="Dream Thumbnail"
+                          loading="lazy"
                           style={{
                             display: 'block',
                             width: '100%',
@@ -521,7 +480,8 @@ export default function App() {
             <p className="text-sm text-purple-200 mb-4">
             Tell me about your dream in as much detail as you remember — characters, settings, emotions, anything that stood out. 
             After submitting, I will take a moment to analyze your dream and generate a personalized interpretation. 
-            This may take a few seconds, so sit tight while the magic happens ✨
+            Your dream interpretation takes a few moments, but your dream image will take me a minute or so to create.
+            So sit tight while the magic happens ✨
             </p>
 
             <textarea
@@ -561,7 +521,7 @@ export default function App() {
                       d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                     ></path>
                   </svg>
-                  {loadingPhase === 'generating' ? 'Generating Image...' : 'Analyzing Dream...'}
+                  {loadingPhase === 'generating' ? 'Creating dream image...' : 'Analyzing Dream...'}
                 </>
               ) : (
                 'Submit Dream'
@@ -569,10 +529,18 @@ export default function App() {
             </button>
 
             {message && <p className="mt-2 text-sm text-red-300">{message}</p>}
-            {loading && <p className="mt-4 text-white">Your dream analysis will appear here shortly.</p>}
+            {loading && loadingPhase === 'analyzing' && (
+              <p className="mt-4 text-white">Your dream analysis will appear here shortly.</p>
+            )}
+            {
+            /* {loading && loadingPhase === 'generating' && (
+              <p className="mt-4 text-white">Creating dream image...</p>
+            )} */
+            }
+
             {aiResponse && (
               <div className="mt-6 p-4 bg-white text-gray-900 rounded shadow">
-                <h3 className="font-bold text-lg mb-2">Dream Interpretation:</h3>
+                <h3 className="font-bold text-lg mb-2">Dream Interpretation: </h3>
                 <p className="italic">{aiResponse}</p>
                 {dreamImage && (
                   <img src={dreamImage} alt="Dream" className="mt-4 rounded shadow" />
@@ -585,38 +553,6 @@ export default function App() {
     );
   }
 
-  // if (view === 'landing') {
-  //   return (
-  //     <div className="min-h-screen bg-gradient-to-br from-purple-800 to-indigo-700 flex flex-col items-center justify-center text-white">
-  //       <h1 className="text-4xl font-bold mb-6">Welcome to Dreamr ✨</h1>
-  //       <p className="mb-8 text-lg">Your personal AI-powered dream analysis</p>
-  //       <div className="space-x-4">
-  //         <button className="bg-white text-purple-800 font-semibold px-6 py-2 rounded hover:bg-gray-200" onClick={() => setView('login')}>Log In</button>
-  //         <button className="bg-transparent border border-white px-6 py-2 rounded hover:bg-white hover:text-purple-800" onClick={() => setView('register')}>Register</button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
-  // carosel slideshow 
-  // if (view === 'landing') {
-  //   const randomImages = [...backgroundImages].sort(() => 0.5 - Math.random());
-  
-  //   return (
-  //     <div className="min-h-screen bg-gradient-to-br from-purple-800 to-indigo-700 flex flex-col items-center justify-center text-white relative">
-  //       <h1 className="text-4xl font-bold mb-6">Welcome to Dreamr ✨</h1>
-  //       <p className="mb-8 text-lg">Your personal AI-powered dream analysis</p>
-  //       <div className="space-x-4">
-  //         <button className="bg-white text-purple-800 font-semibold px-6 py-2 rounded hover:bg-gray-200" onClick={() => setView('login')}>Log In</button>
-  //         <button className="bg-transparent border border-white px-6 py-2 rounded hover:bg-white hover:text-purple-800" onClick={() => setView('register')}>Register</button>
-  //       </div>
-  
-  //       <div className="absolute bottom-0 w-full px-4 pb-6">
-  //         <DreamImageCarousel images={randomImages} />
-  //       </div>
-  //     </div>
-  //   );
-  // }
 
   if (view === 'confirmation') {
     return (
@@ -626,7 +562,7 @@ export default function App() {
           <p>{confirmationMessage}</p>
           <button
             className="mt-4 px-4 py-2 bg-purple-700 text-white rounded hover:bg-purple-800"
-            onClick={() => setView('login')}
+            onClick={() => handleViewChange('login')}
           >
             Go to Login
           </button>
@@ -643,9 +579,10 @@ export default function App() {
             {backgroundImages.map((img, i) => (
               <div key={i} className="w-full aspect-square">
                 <img
-                  src={`/static/images/dreams/${img}`}
+                  src={`/static/images/tiles/${img}`}
                   className="w-full h-full object-cover opacity-60"
                   alt=""
+                  style={{ filter: 'blur(1px)' }}
                 />
               </div>
             ))}
@@ -657,8 +594,8 @@ export default function App() {
           <h1 className="text-4xl font-bold mb-6">Welcome to Dreamr ✨</h1>
           <p className="mb-8 text-lg">Your personal AI-powered dream analysis</p>
           <div className="space-x-4">
-            <button className="bg-white text-purple-800 font-semibold px-6 py-2 rounded hover:bg-gray-200" onClick={() => setView('login')}>Log In</button>
-            <button className="bg-transparent border border-white px-6 py-2 rounded hover:bg-white hover:text-purple-800" onClick={() => setView('register')}>Register</button>
+            <button className="bg-white text-purple-800 font-semibold px-6 py-2 rounded hover:bg-gray-200" onClick={() => handleViewChange('login')}>Log In</button>
+            <button className="bg-transparent border border-white px-6 py-2 rounded hover:bg-white hover:text-purple-800" onClick={() => handleViewChange('register')}>Register</button>
           </div>
           <a href="/login/google" className="mt-6">
             <button className="bg-white text-gray-800 px-4 py-2 rounded shadow hover:bg-gray-100 flex items-center justify-center">
@@ -684,9 +621,10 @@ export default function App() {
             {backgroundImages.map((img, i) => (
               <div key={i} className="w-full aspect-square">
                 <img
-                  src={`/static/images/dreams/${img}`}
+                  src={`/static/images/tiles/${img}`}
                   className="w-full h-full object-cover opacity-60"
                   alt=""
+                  style={{ filter: 'blur(1px)' }}
                 />
               </div>
             ))}
@@ -701,7 +639,7 @@ export default function App() {
             <input className="block w-full mb-2 p-2 border rounded" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
             <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full">Log In</button>
             {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
-            <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('register')}>Need an account? Register</p>
+            <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => handleViewChange('register')}>Need an account? Register</p>
           </form>
           <a href="/login/google" className="mt-6">
             <button className="bg-white text-gray-800 px-4 py-2 rounded shadow hover:bg-gray-100 flex items-center justify-center">
@@ -728,9 +666,10 @@ export default function App() {
             {backgroundImages.map((img, i) => (
               <div key={i} className="w-full aspect-square">
                 <img
-                  src={`/static/images/dreams/${img}`}
+                  src={`/static/images/tiles/${img}`}
                   className="w-full h-full object-cover opacity-60"
                   alt=""
+                  style={{ filter: 'blur(1px)' }}
                 />
               </div>
             ))}
@@ -746,7 +685,7 @@ export default function App() {
             <input className="block w-full mb-2 p-2 border rounded" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
             <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full">Register</button>
             {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
-            <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => setView('login')}>Already have an account? Log in</p>
+            <p className="mt-4 text-center text-sm text-purple-200 cursor-pointer" onClick={() => handleViewChange('login')}>Already have an account? Log in</p>
           </form>
           <a href="/login/google" className="mt-6">
             <button className="bg-white text-gray-800 px-4 py-2 rounded shadow hover:bg-gray-100 flex items-center justify-center">
@@ -774,8 +713,8 @@ export default function App() {
             {backgroundImages.map((img, i) => (
               <div key={i} className="w-full aspect-square">
                 <img
-                  src={`/static/images/dreams/${img}`}
-                  className="w-full h-full object-cover opacity-60"
+                  src={`/static/images/tiles/${img}`}
+                  className="w-full h-full object-cover opacity-50"
                   alt=""
                 />
               </div>
@@ -834,10 +773,10 @@ export default function App() {
                     onChange={handleChange}
                     className="block w-full mt-1 p-2 text-black rounded"
                   >
-                    <option value="">Select</option>
+                    {/* <option value="">Select</option> */}
                     <option value="male">Male</option>
                     <option value="female">Female</option>
-                    <option value="nonbinary">Nonbinary</option>
+                    {/* <option value="nonbinary">Nonbinary</option> */}
                     <option value="prefer not to say">Prefer not to say</option>
                   </select>
                 </label>
@@ -881,7 +820,7 @@ export default function App() {
     );
   }
 
-  if (view === 'gallery') {
+    if (view === 'gallery') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
         <Navigation />
@@ -891,11 +830,14 @@ export default function App() {
           <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {dreams.map((dream, i) => (
               <div key={i} className="w-full">
-                <img
-                  src={dream.image_file}
-                  alt="Dream"
-                  className="w-full h-auto rounded-lg"
-                />
+                {/* <a href={dream.image_file} target="_blank" rel="noopener noreferrer"> */}
+                  <img
+                    src={dream.image_file}
+                    alt="Dream"
+                    loading="lazy"
+                    className="w-full h-auto rounded-lg"
+                  />
+                {/* </a> */}
                 <p className="text-sm text-gray-300">{dream.summary}</p>
                 <div className="flex gap-2 mt-1">
                   {/* <button onClick={() => shareToSocial(dream, 'facebook')} className="text-blue-400 text-xs underline hover:text-blue-200">Share to Facebook</button> */}
@@ -909,6 +851,36 @@ export default function App() {
       </div>
     );
   }
+  
+  // if (view === 'gallery2') {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
+  //       <Navigation />
+  //       <div className="w-full p-4">
+  //         <h2 className="text-3xl font-bold mb-4 text-center">Dream Gallery ✨</h2>
+        
+  //         <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+  //           {dreams.map((dream, i) => (
+  //             <div key={i} className="w-full">
+  //               <img
+  //                 src={dream.image_file}
+  //                 alt="Dream"
+  //                 loading="lazy"
+  //                 className="w-full h-auto rounded-lg"
+  //               />
+  //               <p className="text-sm text-gray-300">{dream.summary}</p>
+  //               <div className="flex gap-2 mt-1">
+  //                 {/* <button onClick={() => shareToSocial(dream, 'facebook')} className="text-blue-400 text-xs underline hover:text-blue-200">Share to Facebook</button> */}
+  //                 {/* <button onClick={() => shareToSocial(dream, 'twitter')} className="text-blue-400 text-xs underline hover:text-blue-200">Twitter</button> */}
+  //                 {/* <button onClick={() => shareToSocial(dream, 'pinterest')} className="text-blue-400 text-xs underline hover:text-blue-200">Pinterest</button> */}
+  //               </div>
+  //             </div>
+  //           ))}
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   if (view === 'dream' && selectedDream) {
     return (
