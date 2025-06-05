@@ -433,13 +433,12 @@ export default function App() {
             <h2 className="text-3xl font-bold mb-4">Dream Journal ✨</h2>
             <div className="grid gap-2">
               {dreams.length > 0 ? dreams.map(dream => (
-                <div key={dream.id} className="bg-white text-gray-800 rounded p-4 shadow">
-                  <p className="text-sm sm:text-base mb-2 font-semibold">
-                    {dream.created_at ? new Date(dream.created_at).toLocaleString() : ''} - {dream.summary}
-                  </p>
-              
-                  <div className="flex items-start gap-4">
-                    {/* LOCKED-SIZE IMAGE GOES HERE */}
+                <div key={dream.id} className="bg-white text-gray-800 rounded p-2 shadow">
+                  {/* Date + Summary Clickable Header */}
+                  <div
+                    className="flex items-center gap-2 text-sm sm:text-base font-semibold cursor-pointer"
+                    onClick={() => toggleExpand(dream.id)}
+                  >
                     {dream.image_file && (
                       <a
                         href={dream.image_file}
@@ -463,17 +462,36 @@ export default function App() {
                         />
                       </a>
                     )}
-              
-                    {/* TEXT BLOCK */}
-                    <div>
-                        <div className="flex-grow cursor-pointer" onClick={() => toggleExpand(dream.id)}>
-                          <p className="text-sm sm:text-base italic mb-2">{dream.text}</p>
-                          {expandedDreams[dream.id] && dream.analysis && (
-                            <p className="text-xs sm:text-sm text-purple-900 mt-2">{dream.analysis}</p>
-                          )}
-                        </div>
-                    </div>
+                    <span>
+                      {dream.created_at ? new Date(dream.created_at).toLocaleString() : ''} - {dream.summary}
+                    </span>
                   </div>
+              
+                  {/* Expanded View: Image + Text */}
+                  {expandedDreams[dream.id] && (
+                    <div className="mt-2 flex items-start gap-4">
+              
+                      <div className="flex-grow cursor-pointer" onClick={() => toggleExpand(dream.id)}>
+                        <p className="text-sm sm:text-base italic mb-2">{dream.text}</p>
+                        {dream.analysis && (
+                          <p className="text-xs sm:text-sm text-purple-900 mt-2">{dream.analysis}</p>
+                        )}
+                        {dream.image_file && (<img
+                          src={dream.image_file}
+                          alt="Dream Image"
+                          loading="lazy"
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '4px',
+                            border: '1px solid #ccc',
+                          }}
+                        />)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )) : <p>Your dreams will appear here.</p>}
 
