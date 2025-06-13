@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Menu, LogOut, LayoutDashboard, Home } from 'lucide-react';
 import { timezones } from './timezones';
+import { marked } from 'marked';
+
 
 export default function App() {
   const [view, setView] = useState('landing');
@@ -12,6 +14,7 @@ export default function App() {
   const [firstName, setFirstName] = useState('');
   const [message, setMessage] = useState('');
   const [dreams, setDreams] = useState([]);
+  const [allDreams, setAllDreams] = useState([]);
   const [dreamText, setDreamText] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [dreamImage, setDreamImage] = useState('');
@@ -24,6 +27,8 @@ export default function App() {
   const [loadingPhase, setLoadingPhase] = useState(''); // 'analyzing', 'generating
 // for images on landing page
   const [backgroundImages, setBackgroundImages] = useState([]);
+
+// for dashboard (hidden/deleted dreams are hidden)
   const fetchDreams = async () => {
     try {
       const res = await fetch('/api/dreams', { credentials: 'include' });
@@ -33,15 +38,29 @@ export default function App() {
       setDreams([]);
     }
   };
+
+// for management page (all dreams displayed)
+  const fetchAllDreams = async () => {
+    try {
+      const res = await fetch('/api/alldreams', { credentials: 'include' });
+      const data = await res.json();
+      setAllDreams(data);
+    } catch {
+      setAllDreams([]);
+    }
+  };
   
   // to handle view changes
   const handleViewChange = (newView) => {
+    if (newView === 'dashboard') {
+      fetchDreams();
+    }
     setView(newView);
     window.history.pushState({}, '', `/${newView}`);
   };
 
 
-  function ProfileMenu({ onGallery, onLogout, onProfile }) {
+  function ProfileMenu({ onGallery, onProfile, onManage, onLogout }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef(null);
 
@@ -70,6 +89,7 @@ export default function App() {
         </button>
         {isOpen && (
           <div className="absolute right-0 mt-2 w-40 bg-white text-black rounded shadow-lg z-50">
+            
             <button
               onClick={() => {
                 onGallery();
@@ -77,8 +97,19 @@ export default function App() {
               }}
               className="block w-full text-left px-4 py-2 hover:bg-gray-100"
             >
-              Gallery
+              Dream Gallery
             </button>
+
+            <button
+              onClick={() => {
+                onManage();
+                setIsOpen(false);
+              }}
+              className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+            >
+              Manage Journal
+            </button>
+
             <button
               onClick={() => {
                 onProfile();
@@ -86,8 +117,9 @@ export default function App() {
               }}
               className="block w-full text-left px-4 py-2 hover:bg-gray-100"
             >
-              Profile
+              Edit Profile
             </button>
+            
             <button
               onClick={() => {
                 onLogout();
@@ -97,13 +129,14 @@ export default function App() {
             >
               Logout
             </button>
+            
           </div>
         )}
       </div>
     );
   }
 
-  // This is inside the "app" function
+  // Fetches dreams for dashboard (not hidden dreams)
   useEffect(() => {
     const verifyAuth = async () => {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -115,6 +148,7 @@ export default function App() {
           if (data.authenticated) {
             setUserName(data.first_name || 'Sleepyhead');
             await fetchDreams();
+            await fetchAllDreams();
             handleViewChange('dashboard');  // moved here so that user is populated before going to dashboard
             return;
           }
@@ -361,7 +395,6 @@ export default function App() {
       const dreamTone = data.tone;
   
       setLoadingPhase('generating');
-      //mrk, 538
       setMessage([
         `Your dream feels "${dreamTone || 'mysterious'}".`,
         'Please keep this window open while I create your dream image...'
@@ -393,6 +426,7 @@ export default function App() {
       setLoadingPhase('');
       setDreamText('');
       fetchDreams();  // Refresh dream history
+      fetchAllDreams();
     }
   };
 
@@ -413,18 +447,42 @@ export default function App() {
           <Home className="w-5 h-5" />
         </button>
         <ProfileMenu
-          onProfile={() => handleViewChange('profile')}
           onGallery={() => handleViewChange('gallery')}
+          onProfile={() => handleViewChange('profile')}
+          onManage={() => handleViewChange('manage')}
           onLogout={logout}
         />
       </div>
     </nav>
   );
 
+  
+  const handleDeleteDream = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this dream?")) return;
+  
+    const res = await fetch(`/api/dreams/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setAllDreams(prev => prev.filter(dream => dream.id !== id));
+    }
+  };
 
   
+  const handleToggleHidden = async (id) => {
+    const res = await fetch(`/api/dreams/${id}/toggle-hidden`, { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json(); // expects { hidden: true/false }
+  
+      setAllDreams(prev =>
+        prev.map(dream =>
+          dream.id === id ? { ...dream, hidden: data.hidden } : dream
+        )
+      );
+    }
+  };
+  
   if (view === 'dashboard') {
-    const latestDream = dreams[dreams.length - 1];
+    // const latestDream = dreams[dreams.length - 1];
+    const latestDream = dreams[0];
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
         <Navigation />
@@ -474,7 +532,10 @@ export default function App() {
                       <div className="flex-grow cursor-pointer" onClick={() => toggleExpand(dream.id)}>
                         <p className="text-sm sm:text-base italic mb-2">{dream.text}</p>
                         {dream.analysis && (
-                          <p className="text-xs sm:text-sm text-purple-900 mt-2">{dream.analysis}</p>
+                          <div
+                            className="text-xs sm:text-sm text-purple-900 mt-2 prose prose-sm"
+                            dangerouslySetInnerHTML={{ __html: marked(dream.analysis) }}
+                          ></div>
                         )}
                         {dream.image_file && (<img
                           src={dream.image_file}
@@ -572,7 +633,10 @@ export default function App() {
             {aiResponse && (
               <div className="mt-6 p-4 bg-white text-gray-900 rounded shadow">
                 <h3 className="font-bold text-lg mb-2">Dream Interpretation: </h3>
-                <p className="italic">{aiResponse}</p>
+                <div
+                  className="prose prose-sm prose-purple max-w-none"
+                  dangerouslySetInnerHTML={{ __html: marked(aiResponse) }}
+                ></div>
                 {dreamImage && (
                   <img src={dreamImage} alt="Dream" className="mt-4 rounded shadow" />
                 )}
@@ -584,6 +648,55 @@ export default function App() {
     );
   }
 
+
+  if (view === 'manage') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-800 text-white">
+        <Navigation />
+        <div className="p-2 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h2 className="text-3xl font-bold mb-4">Manage Journal 🛠️</h2>
+            <div className="grid gap-2">
+              {allDreams.length > 0 ? allDreams.map(dream => (
+                <div key={dream.id} className="bg-white text-gray-800 rounded p-2 shadow">
+                  <div className="flex items-center gap-2 justify-between">
+                    <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+                      {dream.image_file && (
+                        <img
+                          src={dream.image_tile}
+                          alt="Dream Thumbnail"
+                          className="w-12 h-12 object-cover border rounded"
+                        />
+                      )}
+                      <span>
+                        {dream.created_at ? new Date(dream.created_at).toLocaleString() : ''} - {dream.summary}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleToggleHidden(dream.id)}
+                        className={dream.hidden 
+                          ? "text-xs bg-green-500 hover:bg-yellow-600 text-white px-2 py-1 rounded" 
+                          : "text-xs bg-yellow-500 hover:bg-green-600 text-white px-2 py-1 rounded"}
+                      >
+                        {dream.hidden ? 'Unhide' : 'Hide'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDream(dream.id)}
+                        className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )) : <p>Your dreams will appear here.</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (view === 'confirmation') {
     return (
