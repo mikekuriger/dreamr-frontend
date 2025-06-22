@@ -879,7 +879,7 @@ export default function App() {
               <h1 className="text-2xl font-bold mb-4">Profile</h1>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* All your input fields remain unchanged */}
-                <label className="block">
+                {/* <label className="block">
                   Email
                   <input
                     type="email"
@@ -888,6 +888,9 @@ export default function App() {
                     onChange={handleChange}
                     className="block w-full mt-1 p-2 text-black rounded"
                   />
+                </label> */}
+                <label className="block">
+                  Email - {formData.email}
                 </label>
                 <label className="block">
                   First Name
@@ -954,7 +957,7 @@ export default function App() {
                   type="submit"
                   className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                 >
-                  Save Profile
+                  Update Profile
                 </button>
               </form>
             </div>
